@@ -1,0 +1,16 @@
+from abc import ABCMeta
+from user.domain.user import User
+
+class IUserRepository(metaclass=ABCMeta):
+    @abstractmethod #추상 클래스이므로 객체 직접 생성할 수 없다. 
+    def save(self, user:User):
+        #interface 함수 구현부는 Error 일으켜서 구현이 필요함을 기술
+        raise NotImplementedError 
+
+    @abstractmethod
+    def find_by_email(self, email:str) -> User:
+        """
+        이메일로 유저 검색. 검색한 유저 없을 경우 422에러 발생시킴
+        """
+        raise NotImplementedError
+    

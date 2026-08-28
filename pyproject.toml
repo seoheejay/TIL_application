@@ -9,7 +9,11 @@ requires-python = ">=3.13"
 dependencies = [
     "fastapi (>=0.141.1,<0.142.0)",
     "uvicorn (>=0.52.4,<0.53.0)",
-    "py-ulid (>=1.0.3,<2.0.0)"
+    "py-ulid (>=1.0.3,<2.0.0)",
+    "passlib[bcrypt] (>=1.7.4,<2.0.0)",
+    "sqlalchemy (>=2.0.52,<3.0.0)",
+    "mysqlclient (>=2.2.8,<3.0.0)",
+    "alembic (>=1.19.1,<2.0.0)"
 ]
 
 
