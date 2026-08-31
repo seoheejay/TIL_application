@@ -14,3 +14,10 @@ class IUserRepository(metaclass=ABCMeta):
         """
         raise NotImplementedError
     
+    @abstractmethod
+    def find_by_id(self, id:str) -> User:
+        raise NotImplementedError
+
+    @abstractmethod
+    def update(self, user:User):
+        raise NotImplementedError
