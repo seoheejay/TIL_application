@@ -1,13 +1,17 @@
 from ulid import ULID
 from datetime import datetime
 from user.domain.user import User
-from user.infra.repository.user_repo import UserRepository
+#from user.infra.repository.user_repo import UserRepository
+from user.domain.repository.user_repo import IUserRepository
 from fastapi import HTTPException
 from utils.crypto import Crypto
+#from containers import Container 서비스는 컨테이너를 알면 안됨. 의존성 주입 요점은 객체가 자기를 누가 조립하는지 몰라도 되게 만드는 것. 
 
 class UserService:
-    def __init__(self):
-        self.user_repo: IUserRepository = UserRepository() 
+    def __init__(
+        self,
+        user_repo: IUserRepository):
+        self.user_repo = user_repo
         self.ulid = ULID()
         self.crypto = Crypto()
 
@@ -22,7 +26,7 @@ class UserService:
 
         #이미 가입한 유저일 경우 다시 422에러 일으킨다
         if _user:
-            raise HTTPException(status_code=442) 
+            raise HTTPException(status_code=422) 
         
         now = datetime.now()
         user: User = User( #User 도메인 객체 생성

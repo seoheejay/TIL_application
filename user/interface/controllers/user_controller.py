@@ -1,7 +1,11 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
 from user.application.user_service import UserService
+from typing import Annotated
+
+from dependency_injector.wiring import inject,Provide
+from containers import Container
 
 #fastapi가 제공하는 APIRouter 객체를 생성한다. 유저 앱은 대부분 유저 엔티티를 다루는 기능을 가진다.
 #따라서 api 경로에 /users로 시작하도록 한다.
@@ -13,14 +17,17 @@ class CreateUserBody(BaseModel):
     email:str
     password:str
 
-
 @router.post("", status_code=201)
+@inject
 #FastAPI는 라우터의 경로와 메서드에 따라 요청 매개변수나 본문을 라우터에 전달한다.
 #따라서 위에서 선언한 파이단틱 CreateUserBody 모델이 라우터 함수의 인수로 주입된다.
-def create_user(user:CreateUserBody):
-    #애플리케이션 계층에 있는 UserService 객체를 만들고 유저 생성 유스 케이스 함수를 호출한다. 인터페이스 계층은 애플리케이션 계층에 의존해도 된다.
-    user_service = UserService()
-    create_user = user_service.create_user(
+def create_user( #UserService를 의존성으로 주입
+    user: CreateUserBody,
+    #user_service: Annotated[UserService, Depends(UserService)] #파이썬에서 제공하는 Annotated를 이용해 user_service 인수 타입이 UserService임을 나타냄
+    user_service: UserService = Depends(Provide[Container.user_service])
+    ):
+
+    create_user = user_service.create_user( #UserService를 직접 생성하는게 아닌, 주입받은 객체 사용
         name=user.name,
         email=user.email,
         password=user.password

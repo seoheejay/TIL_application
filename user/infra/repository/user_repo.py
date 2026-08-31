@@ -2,11 +2,12 @@ from user.domain.repository.user_repo import IUserRepository
 from database import SessionLocal
 from user.domain.user import User as UserVO
 from user.infra.db_models.user import User
+#User는 DB table, UserVO(Value Object)는 도메인 객체
 from fastapi import HTTPException
 from utils.db_utils import row_to_dict
 
 class UserRepository(IUserRepository):
-    def save(self, user: userVO):
+    def save(self, user: UserVO):
         new_user = User(    #유저 db 모델 객체 생성
             id = user.id,
             email = user.email,
@@ -31,4 +32,5 @@ class UserRepository(IUserRepository):
 
         if not user:
             raise HTTPException(status_code = 422)
+        # **구문은 파이썬에서 제공하는 가변 키워드를 다룰 때 사용하는 구문
         return UserVO(**row_to_dict(user))
