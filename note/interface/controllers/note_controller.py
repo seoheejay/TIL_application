@@ -30,6 +30,12 @@ class CreateNoteBody(BaseModel):
         default=None, min_length=1, max_length=32,
     )
 
+class UpdateNoteBody(BaseModel):
+    title:str|None = Field(default=None, min_length=1, max_length=64)
+    content: str|None = Field(default = None, min_length=1)
+    memo_date: str|None = Field(default = None, min_length=8, max_length=8)
+    tags: list[str] |None = Field(default=None)
+
 @router.post("", status_code=201, response_model=NoteResponse)
 @inject
 def create_note(
@@ -97,5 +103,26 @@ def get_note(
 
     response = addict(note)
     response.update({"tags": [tag.name for tag in note.tags]})
+
+    return response
+
+@router.put("/{id}", response_model=NoteResponse)
+@inject
+def update_note(
+    id: str,
+    current_user: Annotated[CurrentUser, Depends(get_current_user)],
+    body: UpdateNoteBody,
+    note_service: NoteService = Depends(Provide[Container.note_service]),
+):
+    note = note_service.update_note(
+        user_id = current_user.id,
+        id=id,
+        title=body.title,
+        content = body.content,
+        memo_date=body.memo_date,
+        tag_names=body.tags,
+    )
+    response = asdict(note)
+    response.update({"tags":[tag.name for tag in note.tags]})
 
     return response
