@@ -15,7 +15,13 @@ class UserService:
         self.ulid = ULID()
         self.crypto = Crypto()
 
-    def create_user(self, name: str, email:str, password: str):
+    def create_user(
+            self, 
+            name: str, 
+            email:str, 
+            password: str,
+            memo: str|None = None,
+            ):
         _user = None #db에서 찾은 유저 변수. 새로 생성할 유저와 구분하기 위해 _ 붙임
 
         try:
@@ -35,8 +41,28 @@ class UserService:
             email=email,
             #password=password,
             password=self.crypto.encrypt(password),
+            memo=memo,
             created_at=now,
             updated_at=now,
         )
         self.user_repo.save(user) #생성된 객체를 저장소로 전달
         return user
+
+    def update_user(
+            self, 
+            user_id: str,
+            name: str|None = None,
+            password: str|None = None,
+    ):
+        user = self.user_repo.find_by_id(user_id)
+
+        if name:
+            user.name= name
+        if password:
+            user.password = self.crypto.encrypt(password)
+        user.updated_at = datetime.now()
+        self.user_repo.update(user)
+        return user
+
+    def get_users(self) -> list[User]:
+        return self.user_repo.get_users()

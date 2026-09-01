@@ -13,13 +13,6 @@ from datetime import datetime
 #따라서 api 경로에 /users로 시작하도록 한다.
 router = APIRouter(prefix="/users")
 
-class UserResponse(BaseModel):
-    id:str
-    name:str
-    email:str
-    created_at:datetime
-    updated_at: datetime
-
 #파이단틱의 BaseModel 상속받아 파이단틱 모델 선언
 class CreateUserBody(BaseModel):
     name:str
@@ -29,6 +22,13 @@ class CreateUserBody(BaseModel):
 class UpdateUser(BaseModel):
     name: str|None = None
     password: str|None = None
+
+class UserResponse(BaseModel):
+    id:str
+    name:str
+    email:str
+    created_at:datetime
+    updated_at: datetime
 
 @router.post("", status_code=201, response_model=UserResponse)
 @inject
@@ -45,19 +45,29 @@ def create_user( #UserService를 의존성으로 주입
         email=user.email,
         password=user.password
     )
-    return create_user #아직 인프라 계층 구현 안되어 있어서, 이 상태에서 요청 보내면 error 발생함
+    return create_user 
 
-@router.put("/{user_id}")
+@router.put("/{user_id}", response_model=UserResponse)
 @inject
 def update_user(
     user_id: str,
     user:UpdateUser,
     user_service: UserService = Depends(Provide[Container.user_service]),
     ):
-    user = user_service.update_user(
+
+    updated_user = user_service.update_user(
         user_id=user_id,
         name = user.name,
         password=user.password,
     )
-    return user
+    return updated_user
 
+@router.get("")
+@inject
+def get_users(
+    user_service: UserService = Depends(Provide[Container.user_service]),
+):
+    users = user_service.get_users()
+    return{
+        "users":users,
+    }
