@@ -1,0 +1,12 @@
+{
+  "name": "til-application",
+  "private": true,
+  "description": "프런트엔드 스크립트를 리포지터리 루트에서도 실행할 수 있게 하는 위임용 package.json. 실제 의존성은 frontend/package.json에 있다.",
+  "scripts": {
+    "postinstall": "npm --prefix frontend install",
+    "dev": "npm --prefix frontend run dev",
+    "build": "npm --prefix frontend run build",
+    "preview": "npm --prefix frontend run preview",
+    "typecheck": "npm --prefix frontend run typecheck"
+  }
+}
