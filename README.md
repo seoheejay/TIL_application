@@ -22,6 +22,16 @@ uvicorn main:app --reload
 python -c "import secrets; print(secrets.token_urlsafe(32))"
 ```
 
+### 포트
+
+백엔드 기본 포트는 **8000** 입니다. 프론트가 8000 을 쓴다면 둘 중 하나를 옮기세요.
+
+```bash
+uvicorn main:app --reload --port 8001    # 백엔드를 옮기는 경우
+```
+
+CORS 는 `localhost` / `127.0.0.1` 이면 **포트를 가리지 않고 허용**하므로, 프론트 포트가 바뀌어도 설정을 고칠 필요가 없습니다. 배포 도메인이 생기면 `.env` 의 `CORS_ORIGINS` 에 적습니다.
+
 ## API
 
 인증이 필요한 API 는 `Authorization: Bearer <access_token>` 헤더가 필요합니다.

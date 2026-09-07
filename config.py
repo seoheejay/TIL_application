@@ -33,9 +33,17 @@ JWT_ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
 ACCESS_TOKEN_EXPIRE_HOURS = int(os.getenv("ACCESS_TOKEN_EXPIRE_HOURS", "6"))
 
 # 프론트엔드가 다른 포트에서 뜨면 브라우저가 요청을 막는다(CORS).
-# 허용할 출처를 쉼표로 구분해 적는다
+# 배포 도메인처럼 정확히 지정해야 하는 출처를 쉼표로 구분해 적는다
 CORS_ORIGINS = [
     origin.strip()
-    for origin in os.getenv("CORS_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173").split(",")
+    for origin in os.getenv("CORS_ORIGINS", "").split(",")
     if origin.strip()
 ]
+
+# 로컬 개발 중에는 프론트 포트가 자주 바뀐다(5173, 3000, 8000 …).
+# localhost / 127.0.0.1 이면 포트를 가리지 않고 허용해서 매번 목록을 고치지 않게 한다.
+# 외부 도메인은 여전히 막히므로 로컬 개발용으로는 안전하다.
+CORS_ORIGIN_REGEX = os.getenv(
+    "CORS_ORIGIN_REGEX",
+    r"https?://(localhost|127\.0\.0\.1)(:\d+)?",
+)

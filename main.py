@@ -8,7 +8,7 @@ from fastapi.responses import JSONResponse
 from fastapi.encoders import jsonable_encoder
 from fastapi.middleware.cors import CORSMiddleware
 
-from config import CORS_ORIGINS
+from config import CORS_ORIGIN_REGEX, CORS_ORIGINS
 
 
 app = FastAPI()
@@ -17,10 +17,12 @@ app.include_router(user_routers)
 app.include_router(note_routers)
 
 #브라우저는 다른 출처(포트가 다르면 다른 출처다)로 가는 요청을 기본적으로 막는다.
-#프론트엔드가 뜨는 주소를 허용 목록에 넣어야 한다. 허용 목록은 .env 에서 읽는다
+#로컬(localhost/127.0.0.1)은 포트를 가리지 않고 허용해서 프론트 포트가 바뀌어도 깨지지 않게 한다.
+#배포 도메인처럼 콕 집어야 하는 출처는 .env 의 CORS_ORIGINS 에 적는다
 app.add_middleware(
     CORSMiddleware,
     allow_origins=CORS_ORIGINS,
+    allow_origin_regex=CORS_ORIGIN_REGEX,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
