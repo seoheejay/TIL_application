@@ -55,6 +55,7 @@ class UserRepository(IUserRepository):
 
             existing_user.name = user.name
             existing_user.password = user.password
+            existing_user.memo = user.memo
             existing_user.updated_at = user.updated_at
 
             try:

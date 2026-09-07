@@ -41,3 +41,8 @@ async def validation_exception_handler(
 @app.get("/")
 def hello():
     return {"Hello": "FastAPI"}
+
+@app.get("/health")
+def health():
+    """서버가 살아있는지 확인용. 프론트 개발 중 백엔드 기동 여부를 빠르게 볼 때 쓴다"""
+    return {"status": "ok"}

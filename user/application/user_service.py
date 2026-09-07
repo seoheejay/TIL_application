@@ -42,11 +42,16 @@ class UserService:
         self.user_repo.save(user) #생성된 객체를 저장소로 전달
         return user
 
+    def get_user(self, user_id: str) -> User:
+        """내 정보 조회. 토큰에는 id밖에 없으므로 이름/이메일은 DB에서 가져와야 한다"""
+        return self.user_repo.find_by_id(user_id)
+
     def update_user(
         self,
         user_id: str,
         name: str | None = None,
         password: str | None = None,
+        memo: str | None = None,
     ) -> User:
         user = self.user_repo.find_by_id(user_id)  #없으면 여기서 422
 
@@ -55,6 +60,9 @@ class UserService:
         if password:
             #평문을 그대로 담지 않는다. 저장 직전에 해싱하는 건 서비스의 책임
             user.password = self.crypto.encrypt(password)
+        if memo is not None:
+            #빈 문자열을 보내면 메모를 지우는 의미가 되도록 None 인지로만 판단한다
+            user.memo = memo
 
         user.updated_at = datetime.now()
 

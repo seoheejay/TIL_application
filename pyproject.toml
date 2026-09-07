@@ -31,5 +31,20 @@ build-backend = "poetry.core.masonry.api"
 
 [dependency-groups]
 dev = [
-    "httpx2 (>=2.12.0,<3.0.0)"
+    "httpx2 (>=2.12.0,<3.0.0)",
+    "pytest (>=9.1.1,<10.0.0)",
+    "pytest-cov (>=7.1.0,<8.0.0)"
 ]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# 한글 테스트 이름이 콘솔에서 깨지지 않도록
+addopts = "-q --strict-markers"
+filterwarnings = [
+    "ignore::DeprecationWarning",
+    # 개발용 기본 시크릿이 32바이트 미만일 때 나오는 경고. 테스트에서는 무해하다
+    "ignore:The HMAC key is:UserWarning",
+]
+
+[tool.coverage.run]
+omit = ["tests/*", "migrations/*", "scripts/*"]

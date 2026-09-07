@@ -20,6 +20,7 @@ class UserResponse(BaseModel):
     id:str
     name:str
     email:str
+    memo: str | None = None
     created_at:datetime
     updated_at: datetime
     #password는 일부러 넣지 않는다. response_model이 없는 필드를 잘라내므로 해시가 밖으로 새지 않는다
@@ -33,6 +34,8 @@ class CreateUserBody(BaseModel):
 class UpdateUserBody(BaseModel):
     name: str|None = Field(default=None, min_length=2, max_length=32)
     password: str|None = Field(default=None, min_length=8, max_length=32)
+    #빈 문자열을 보내면 메모를 지운다. None이면 건드리지 않는다
+    memo: str|None = Field(default=None, max_length=1000)
 
 class GetUsersResponse(BaseModel):
     total_count: int
@@ -71,6 +74,17 @@ def login(
 
     return {"access_token": access_token, "token_type": "bearer"}
 
+@router.get("/me", response_model=UserResponse)
+@inject
+def get_me(
+    #프론트가 로그인 직후 "내가 누구인지" 알아야 한다.
+    #토큰에는 id와 role밖에 없으므로 이름/이메일은 이 API로 가져간다
+    current_user: Annotated[CurrentUser, Depends(get_current_user)],
+    user_service: UserService = Depends(Provide[Container.user_service]),
+):
+    return user_service.get_user(user_id=current_user.id)
+
+
 @router.get("", response_model=GetUsersResponse)
 @inject
 def get_users(
@@ -102,6 +116,7 @@ def update_user(
         user_id=current_user.id,
         name=body.name,
         password=body.password,
+        memo=body.memo,
     )
     return user
 
