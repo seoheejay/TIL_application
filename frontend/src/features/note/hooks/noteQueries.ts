@@ -1,12 +1,23 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { createNote, getNote, getNotes } from '../api/noteApi'
-import type { CreateNoteRequest, GetNotesParams } from '../types'
+import {
+  createNote,
+  deleteNote,
+  deleteNoteTags,
+  getNote,
+  getNotes,
+  getNotesByTag,
+  updateNote,
+} from '../api/noteApi'
+import type { CreateNoteRequest, GetNotesByTagParams, GetNotesParams, UpdateNoteRequest } from '../types'
 
 export const noteKeys = {
   all: ['notes'] as const,
   lists: () => [...noteKeys.all, 'list'] as const,
   list: (params: GetNotesParams) => [...noteKeys.lists(), params] as const,
   detail: (id: string) => [...noteKeys.all, 'detail', id] as const,
+  // 태그 검색도 목록의 한 종류라 lists() 아래에 둔다.
+  // 노트를 고치거나 지우면 태그 검색 결과도 같이 무효화되어야 하기 때문이다.
+  byTag: (params: GetNotesByTagParams) => [...noteKeys.lists(), 'tag', params] as const,
 }
 
 export function useNotes(params: GetNotesParams) {
@@ -14,6 +25,15 @@ export function useNotes(params: GetNotesParams) {
     queryKey: noteKeys.list(params),
     queryFn: () => getNotes(params),
     // 페이지를 넘길 때 목록이 빈 화면으로 깜빡이지 않게 이전 데이터를 유지한다.
+    placeholderData: (previous) => previous,
+  })
+}
+
+export function useNotesByTag(params: GetNotesByTagParams) {
+  return useQuery({
+    queryKey: noteKeys.byTag(params),
+    queryFn: () => getNotesByTag(params),
+    enabled: Boolean(params.tagName),
     placeholderData: (previous) => previous,
   })
 }
@@ -31,6 +51,42 @@ export function useCreateNote() {
   return useMutation({
     mutationFn: (payload: CreateNoteRequest) => createNote(payload),
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: noteKeys.lists() })
+    },
+  })
+}
+
+export function useUpdateNote(id: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (payload: UpdateNoteRequest) => updateNote(id, payload),
+    onSuccess: (note) => {
+      // 응답이 곧 최신 노트라 상세는 다시 받아올 필요가 없다.
+      queryClient.setQueryData(noteKeys.detail(id), note)
+      queryClient.invalidateQueries({ queryKey: noteKeys.lists() })
+    },
+  })
+}
+
+export function useDeleteNote() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => deleteNote(id),
+    onSuccess: (_data, id) => {
+      // 지워진 노트의 상세 캐시를 남겨두면 뒤로가기에서 유령 데이터가 보인다.
+      queryClient.removeQueries({ queryKey: noteKeys.detail(id) })
+      queryClient.invalidateQueries({ queryKey: noteKeys.lists() })
+    },
+  })
+}
+
+export function useDeleteNoteTags(id: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: () => deleteNoteTags(id),
+    onSuccess: () => {
+      // 204라 응답 본문이 없다. 상세를 다시 받아와야 태그가 빈 상태로 보인다.
+      queryClient.invalidateQueries({ queryKey: noteKeys.detail(id) })
       queryClient.invalidateQueries({ queryKey: noteKeys.lists() })
     },
   })

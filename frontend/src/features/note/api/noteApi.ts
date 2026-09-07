@@ -1,9 +1,33 @@
 import { api } from '@/api/client'
-import type { CreateNoteRequest, GetNotesParams, GetNotesResponse, Note } from '../types'
+import type {
+  CreateNoteRequest,
+  GetNotesByTagParams,
+  GetNotesParams,
+  GetNotesResponse,
+  Note,
+  UpdateNoteRequest,
+} from '../types'
 
 /** GET /notes?page=&items_per_page= — 인증 필요 */
 export async function getNotes({ page, items_per_page }: GetNotesParams): Promise<GetNotesResponse> {
   const { data } = await api.get<GetNotesResponse>('/notes', {
+    params: { page, items_per_page },
+  })
+  return data
+}
+
+/**
+ * GET /notes/tags/{tag_name} — 인증 필요.
+ * 태그 행은 유저끼리 공유되지만 검색은 user_id로도 걸리므로 남의 노트는 섞이지 않는다.
+ * 응답 모양은 GET /notes와 같다.
+ */
+export async function getNotesByTag({
+  tagName,
+  page,
+  items_per_page,
+}: GetNotesByTagParams): Promise<GetNotesResponse> {
+  // 태그에 한글이나 #, / 가 들어갈 수 있어서 경로에 넣기 전에 인코딩한다.
+  const { data } = await api.get<GetNotesResponse>(`/notes/tags/${encodeURIComponent(tagName)}`, {
     params: { page, items_per_page },
   })
   return data
@@ -19,4 +43,23 @@ export async function getNote(id: string): Promise<Note> {
 export async function createNote(payload: CreateNoteRequest): Promise<Note> {
   const { data } = await api.post<Note>('/notes', payload)
   return data
+}
+
+/** PUT /notes/{id} — 부분 수정. 없는 노트와 남의 노트는 모두 404. */
+export async function updateNote(id: string, payload: UpdateNoteRequest): Promise<Note> {
+  const { data } = await api.put<Note>(`/notes/${id}`, payload)
+  return data
+}
+
+/** DELETE /notes/{id} — 204라 본문이 없다. */
+export async function deleteNote(id: string): Promise<void> {
+  await api.delete(`/notes/${id}`)
+}
+
+/**
+ * DELETE /notes/{id}/tags — 노트는 두고 태그 연결만 끊는다. 204.
+ * PUT에 tags: [] 를 보내도 같은 결과지만, 이쪽은 다른 필드를 건드릴 위험이 없다.
+ */
+export async function deleteNoteTags(id: string): Promise<void> {
+  await api.delete(`/notes/${id}/tags`)
 }

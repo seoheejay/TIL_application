@@ -1,6 +1,9 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
-import { useMe, useUpdateUser } from '@/features/user/hooks/userQueries'
+import { useNavigate } from 'react-router-dom'
+import { useDeleteUser, useMe, useUpdateUser } from '@/features/user/hooks/userQueries'
+import { useAuth } from '@/features/auth/hooks/AuthContext'
+import { ConfirmButton } from '@/components/common/ConfirmButton'
 import type { User } from '@/features/user/types'
 import { normalizeError } from '@/api/client'
 import { Button } from '@/components/common/Button'
@@ -40,7 +43,46 @@ export function ProfilePage() {
 
       {/* key로 묶어 두면 다른 계정으로 바뀌었을 때 입력값이 새로 초기화된다. */}
       <ProfileForm key={me.id} me={me} />
+
+      <DangerZone />
     </>
+  )
+}
+
+/** 되돌릴 수 없는 동작만 모아 둔다. 저장 폼과 섞이면 실수로 누르기 쉽다. */
+function DangerZone() {
+  const navigate = useNavigate()
+  const { signOut } = useAuth()
+  const deleteUser = useDeleteUser()
+  const error = deleteUser.error ? normalizeError(deleteUser.error) : null
+
+  return (
+    <div className="card" style={{ maxWidth: 480, marginTop: '1rem' }}>
+      <h2 style={{ margin: 0, fontSize: '1rem' }}>회원 탈퇴</h2>
+      <p className="muted" style={{ marginTop: '0.5rem' }}>
+        계정과 함께 작성한 노트가 모두 삭제됩니다. 되돌릴 수 없습니다.
+      </p>
+
+      {error && <Alert message={error.message} />}
+
+      <div style={{ marginTop: '1rem' }}>
+        <ConfirmButton
+          label="회원 탈퇴"
+          confirmLabel="계정과 노트를 모두 삭제"
+          pendingLabel="탈퇴 처리 중..."
+          isPending={deleteUser.isPending}
+          onConfirm={() =>
+            deleteUser.mutate(undefined, {
+              onSuccess: () => {
+                // 토큰이 남아 있으면 ProtectedRoute가 통과시켜 버린다. 먼저 지운다.
+                signOut()
+                navigate('/login', { replace: true })
+              },
+            })
+          }
+        />
+      </div>
+    </div>
   )
 }
 

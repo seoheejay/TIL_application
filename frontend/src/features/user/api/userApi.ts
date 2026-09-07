@@ -19,6 +19,15 @@ export async function updateUser(payload: UpdateUserRequest): Promise<User> {
   return data
 }
 
+/**
+ * DELETE /users — 회원 탈퇴. 204라 본문이 없다.
+ * 경로에 id가 없다. 누구를 지울지는 백엔드가 토큰에서 꺼낸다.
+ * 백엔드에 FK ON DELETE CASCADE가 걸려 있어 내 노트도 함께 지워진다.
+ */
+export async function deleteUser(): Promise<void> {
+  await api.delete('/users')
+}
+
 /** GET /users?page=&items_per_page= — ADMIN 전용. 일반 토큰이면 403. */
 export async function getUsers(params: GetUsersParams): Promise<GetUsersResponse> {
   const { data } = await api.get<GetUsersResponse>('/users', { params })

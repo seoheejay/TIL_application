@@ -9,6 +9,8 @@ import { ProfilePage } from '@/pages/user/ProfilePage'
 import { NoteListPage } from '@/pages/note/NoteListPage'
 import { NoteCreatePage } from '@/pages/note/NoteCreatePage'
 import { NoteDetailPage } from '@/pages/note/NoteDetailPage'
+import { NoteEditPage } from '@/pages/note/NoteEditPage'
+import { NoteTagPage } from '@/pages/note/NoteTagPage'
 import { NotFoundPage } from '@/pages/NotFoundPage'
 
 export const router = createBrowserRouter(
@@ -29,7 +31,11 @@ export const router = createBrowserRouter(
           children: [
             { path: 'notes', element: <NoteListPage /> },
             { path: 'notes/new', element: <NoteCreatePage /> },
+            // 'notes/tags/:tagName' 은 'notes/:id' 보다 먼저 둔다.
+            // 세그먼트 수가 달라 실제로 충돌하지는 않지만, 읽는 순서가 곧 우선순위라 명확하게 둔다.
+            { path: 'notes/tags/:tagName', element: <NoteTagPage /> },
             { path: 'notes/:id', element: <NoteDetailPage /> },
+            { path: 'notes/:id/edit', element: <NoteEditPage /> },
             { path: 'users', element: <UserListPage /> },
             { path: 'me', element: <ProfilePage /> },
           ],

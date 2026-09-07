@@ -26,6 +26,11 @@ function unauthorized() {
   return HttpResponse.json({ detail: 'Not authenticated' }, { status: 401 })
 }
 
+/** 없는 노트와 남의 노트를 구분하지 않는다. 백엔드도 둘 다 404다. */
+function notFound() {
+  return HttpResponse.json({ detail: 'Not Found' }, { status: 404 })
+}
+
 /** 백엔드의 422는 본문이 없다. */
 function unprocessable() {
   return new HttpResponse(null, { status: 422 })
@@ -144,6 +149,24 @@ export const handlers = [
     return HttpResponse.json(toUserResponse(user))
   }),
 
+  /**
+   * DELETE /users — 회원 탈퇴. 204.
+   * 백엔드는 FK ON DELETE CASCADE로 노트까지 지우므로 목도 같이 지운다.
+   */
+  http.delete(apiUrl('/users'), ({ request }) => {
+    const tokenUser = requireUser(request)
+    if (!tokenUser) return unauthorized()
+
+    const index = db.users.findIndex((candidate) => candidate.id === tokenUser.id)
+    if (index === -1) return unprocessable()
+
+    db.users.splice(index, 1)
+    db.notes = db.notes.filter((note) => note.user_id !== tokenUser.id)
+    persist()
+
+    return new HttpResponse(null, { status: 204 })
+  }),
+
   // ---------- notes ----------
 
   /** GET /notes?page=&items_per_page= — 본인 노트만. */
@@ -206,14 +229,108 @@ export const handlers = [
     return HttpResponse.json(toNoteResponse(note), { status: 201 })
   }),
 
+  /**
+   * GET /notes/tags/{tag_name} — 태그로 검색. 응답 모양은 GET /notes와 같다.
+   * '/notes/:id' 보다 먼저 등록해 둔다. MSW는 세그먼트 수로 구분하지만 순서를 명확히 한다.
+   */
+  http.get(apiUrl('/notes/tags/:tagName'), ({ request, params }) => {
+    const tokenUser = requireUser(request)
+    if (!tokenUser) return unauthorized()
+
+    const tagName = decodeURIComponent(String(params.tagName))
+    const { page, itemsPerPage, start } = readPage(request)
+
+    const matched = db.notes
+      .filter((note) => note.user_id === tokenUser.id && note.tags.includes(tagName))
+      .sort((a, b) => b.memo_date.localeCompare(a.memo_date))
+
+    return HttpResponse.json({
+      total_count: matched.length,
+      page,
+      notes: matched.slice(start, start + itemsPerPage).map(toNoteResponse),
+    })
+  }),
+
+  /** DELETE /notes/{id}/tags — 노트는 두고 태그만 비운다. 204. */
+  http.delete(apiUrl('/notes/:id/tags'), ({ request, params }) => {
+    const tokenUser = requireUser(request)
+    if (!tokenUser) return unauthorized()
+
+    const note = db.notes.find((candidate) => candidate.id === params.id && candidate.user_id === tokenUser.id)
+    if (!note) return notFound()
+
+    note.tags = []
+    note.updated_at = new Date().toISOString()
+    persist()
+
+    return new HttpResponse(null, { status: 204 })
+  }),
+
   /** GET /notes/{id} — 남의 노트는 없는 것으로 취급(404). */
   http.get(apiUrl('/notes/:id'), ({ request, params }) => {
     const tokenUser = requireUser(request)
     if (!tokenUser) return unauthorized()
 
     const note = db.notes.find((candidate) => candidate.id === params.id && candidate.user_id === tokenUser.id)
-    if (!note) return HttpResponse.json({ detail: 'Not Found' }, { status: 404 })
+    if (!note) return notFound()
 
     return HttpResponse.json(toNoteResponse(note))
+  }),
+
+  /**
+   * PUT /notes/{id} — 부분 수정. 보낸 필드만 반영한다.
+   * tags는 undefined면 건드리지 않고, []면 전부 지운다. 백엔드와 같다.
+   */
+  http.put(apiUrl('/notes/:id'), async ({ request, params }) => {
+    const tokenUser = requireUser(request)
+    if (!tokenUser) return unauthorized()
+
+    const note = db.notes.find((candidate) => candidate.id === params.id && candidate.user_id === tokenUser.id)
+    if (!note) return notFound()
+
+    const body = (await request.json()) as {
+      title?: string
+      content?: string
+      memo_date?: string
+      tags?: string[]
+    }
+
+    if (body.title !== undefined && (body.title.length < 1 || body.title.length > 64)) {
+      return validationError('title', 'String should have at most 64 characters')
+    }
+    if (body.content !== undefined && body.content.length < 1) {
+      return validationError('content', 'String should have at least 1 character')
+    }
+    if (body.memo_date !== undefined && body.memo_date.length !== 8) {
+      return validationError('memo_date', 'String should have exactly 8 characters')
+    }
+    if (body.tags?.some((tag) => tag.length < 1 || tag.length > 32)) {
+      return validationError('tags', 'String should have at most 32 characters')
+    }
+
+    if (body.title) note.title = body.title
+    if (body.content) note.content = body.content
+    if (body.memo_date) note.memo_date = body.memo_date
+    if (body.tags !== undefined) note.tags = Array.from(new Set(body.tags))
+    note.updated_at = new Date().toISOString()
+    persist()
+
+    return HttpResponse.json(toNoteResponse(note))
+  }),
+
+  /** DELETE /notes/{id} — 204. */
+  http.delete(apiUrl('/notes/:id'), ({ request, params }) => {
+    const tokenUser = requireUser(request)
+    if (!tokenUser) return unauthorized()
+
+    const index = db.notes.findIndex(
+      (candidate) => candidate.id === params.id && candidate.user_id === tokenUser.id,
+    )
+    if (index === -1) return notFound()
+
+    db.notes.splice(index, 1)
+    persist()
+
+    return new HttpResponse(null, { status: 204 })
   }),
 ]

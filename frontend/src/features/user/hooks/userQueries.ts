@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { createUser, getMe, getUsers, updateUser } from '../api/userApi'
+import { createUser, deleteUser, getMe, getUsers, updateUser } from '../api/userApi'
 import type { CreateUserRequest, GetUsersParams, UpdateUserRequest } from '../types'
 
 export const userKeys = {
@@ -42,6 +42,18 @@ export function useUpdateUser() {
       // 응답이 곧 최신 내 정보라 다시 받아올 필요가 없다.
       queryClient.setQueryData(userKeys.me(), user)
       queryClient.invalidateQueries({ queryKey: userKeys.lists() })
+    },
+  })
+}
+
+export function useDeleteUser() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: deleteUser,
+    onSuccess: () => {
+      // 계정이 사라졌으니 캐시에 남은 내 정보와 노트를 전부 버린다.
+      // 토큰 정리와 화면 이동은 호출하는 쪽(ProfilePage)이 맡는다.
+      queryClient.clear()
     },
   })
 }

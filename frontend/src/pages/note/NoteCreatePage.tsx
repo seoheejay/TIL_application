@@ -18,8 +18,9 @@ export function NoteCreatePage() {
           isSubmitting={createNote.isPending}
           error={createNote.error ? normalizeError(createNote.error) : null}
           onCancel={() => navigate('/notes')}
-          onSubmit={(payload) =>
-            createNote.mutate(payload, {
+          onSubmit={(values) =>
+            // 생성에서는 tags: [] 와 생략이 같으므로 그대로 실어 보낸다.
+            createNote.mutate(values, {
               onSuccess: (note) => navigate(`/notes/${note.id}`, { replace: true }),
             })
           }
