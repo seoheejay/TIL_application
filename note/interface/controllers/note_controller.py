@@ -38,6 +38,14 @@ class GetNotesResponse(BaseModel):
     page: int
     notes: list[NoteResponse]
 
+class TagSummaryResponse(BaseModel):
+    name: str
+    #이 태그가 붙은 "내" 노트 개수. 남이 같은 태그를 써도 세지 않는다
+    count: int
+
+class GetTagsResponse(BaseModel):
+    tags: list[TagSummaryResponse]
+
 def _validate_memo_date(v: str | None) -> str | None:
     """
     길이만 8자로 맞추면 "abcdefgh"나 "20260231"(2월 31일)도 통과한다.
@@ -110,6 +118,8 @@ def create_note(
 def get_notes(
     page: Page = 1,
     items_per_page: ItemsPerPage = 10,
+    #제목·본문에서 찾는다. 빈 문자열이나 공백만 오면 검색하지 않은 것으로 본다
+    search: Annotated[str | None, Query(max_length=64)] = None,
     current_user: CurrentUser = Depends(get_current_user),
     note_service: NoteService = Depends(Provide[Container.note_service]),
 ): 
@@ -117,6 +127,7 @@ def get_notes(
         user_id =current_user.id,
         page = page,
         items_per_page = items_per_page,
+        search = search.strip() if search and search.strip() else None,
     )
 
     return {
@@ -124,6 +135,20 @@ def get_notes(
         "page" : page,
         "notes" : [_to_response(note) for note in notes],
     }
+
+
+@router.get("/tags", response_model=GetTagsResponse)
+@inject
+def get_tags(
+    current_user: CurrentUser = Depends(get_current_user),
+    note_service: NoteService = Depends(Provide[Container.note_service]),
+):
+    #주의: 이 라우터는 "/{id}" 보다 반드시 위에 있어야 한다.
+    #세그먼트 수가 같아서(/notes/tags vs /notes/{id}) 아래에 두면
+    #/notes/tags 요청이 id="tags" 로 먼저 잡혀 404가 된다. FastAPI는 선언 순서대로 매칭한다
+    tags = note_service.get_tags(user_id=current_user.id)
+
+    return {"tags": tags}
 
 
 @router.get("/tags/{tag_name}", response_model=GetNotesResponse)

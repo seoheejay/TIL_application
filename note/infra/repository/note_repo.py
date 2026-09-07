@@ -1,13 +1,15 @@
 from datetime import datetime
 
 from fastapi import HTTPException, status
+from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 
 from database import SessionLocal
 from note.domain.note import Note as NoteVO
 from note.domain.note import Tag as TagVO
+from note.domain.note import TagSummary
 from note.domain.repository.note_repo import INoteRepository
-from note.infra.db_models.note import Note, Tag
+from note.infra.db_models.note import Note, Tag, note_tag_association
 #Note/Tag는 DB 테이블, NoteVO/TagVO는 도메인 객체. 이름이 같아서 as로 구분한다
 
 
@@ -74,6 +76,16 @@ class NoteRepository(INoteRepository):
             db.query(Tag).filter(Tag.id.in_(orphan_ids)).delete(synchronize_session=False)
 
     @staticmethod
+    def _like_pattern(term: str) -> str:
+        """
+        LIKE에서 % 와 _ 는 와일드카드다. 사용자가 "_" 를 검색하면
+        이스케이프하지 않으면 아무 한 글자에나 걸려 전체가 매칭된다.
+        역슬래시를 먼저 바꿔야 뒤에 붙일 이스케이프 문자가 덮이지 않는다
+        """
+        escaped = term.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+        return f"%{escaped}%"
+
+    @staticmethod
     def _find_owned(db: Session, user_id: str, id: str) -> Note:
         """
         user_id와 id를 함께 걸어 조회한다.
@@ -94,10 +106,23 @@ class NoteRepository(INoteRepository):
             user_id:str,
             page:int,
             items_per_page:int,
+            search:str|None = None,
     ) -> tuple[int, list[NoteVO]]:
         with SessionLocal() as db:
             query = db.query(Note).filter(Note.user_id == user_id)
-            total_count = query.count()  #페이지를 자르기 전 전체 개수
+
+            if search:
+                #제목이나 본문 어느 쪽에 있어도 걸리게 한다.
+                #ilike는 대소문자를 가리지 않는다(한글은 애초에 구분이 없다)
+                pattern = self._like_pattern(search)
+                query = query.filter(
+                    or_(
+                        Note.title.ilike(pattern, escape="\\"),
+                        Note.content.ilike(pattern, escape="\\"),
+                    )
+                )
+
+            total_count = query.count()  #검색 조건까지 반영한, 페이지를 자르기 전 개수
 
             offset = (page - 1) * items_per_page
             notes = (
@@ -210,3 +235,19 @@ class NoteRepository(INoteRepository):
             )
 
             return total_count, [self._to_vo(note) for note in notes]
+
+    def get_tags(self, user_id:str) -> list[TagSummary]:
+        with SessionLocal() as db:
+            #연결 테이블을 타고 내 노트만 세면, 같은 태그를 남이 써도 내 개수만 나온다
+            rows = (
+                db.query(Tag.name, func.count(Note.id).label("count"))
+                .join(note_tag_association, Tag.id == note_tag_association.c.tag_id)
+                .join(Note, Note.id == note_tag_association.c.note_id)
+                .filter(Note.user_id == user_id)
+                .group_by(Tag.name)
+                #많이 쓴 태그가 위로, 개수가 같으면 이름순
+                .order_by(func.count(Note.id).desc(), Tag.name.asc())
+                .all()
+            )
+
+            return [TagSummary(name=name, count=count) for name, count in rows]

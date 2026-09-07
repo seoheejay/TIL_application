@@ -48,6 +48,13 @@ function readPage(request: Request) {
   return { page, itemsPerPage, start: (page - 1) * itemsPerPage }
 }
 
+/** 백엔드처럼 공백만 있는 검색어는 검색하지 않은 것으로 본다. */
+function readSearch(request: Request): string | null {
+  const raw = new URL(request.url).searchParams.get('search')
+  const trimmed = raw?.trim()
+  return trimmed ? trimmed : null
+}
+
 export const handlers = [
   // ---------- auth ----------
 
@@ -175,9 +182,18 @@ export const handlers = [
     if (!tokenUser) return unauthorized()
 
     const { page, itemsPerPage, start } = readPage(request)
+    const search = readSearch(request)
 
     const mine = db.notes
-      .filter((note) => note.user_id === tokenUser.id)
+      .filter((note) => {
+        if (note.user_id !== tokenUser.id) return false
+        if (!search) return true
+        // 백엔드는 제목·본문을 대소문자 없이 본다. LIKE 와일드카드는 글자로 취급한다.
+        const needle = search.toLowerCase()
+        return (
+          note.title.toLowerCase().includes(needle) || note.content.toLowerCase().includes(needle)
+        )
+      })
       // 최근 메모 날짜가 위로 오게 한다.
       .sort((a, b) => b.memo_date.localeCompare(a.memo_date))
 
@@ -227,6 +243,30 @@ export const handlers = [
     persist()
 
     return HttpResponse.json(toNoteResponse(note), { status: 201 })
+  }),
+
+  /**
+   * GET /notes/tags — 내 태그와 개수. 많이 쓴 순, 같으면 이름순.
+   * '/notes/:id' 와 세그먼트 수가 같아서 반드시 그보다 먼저 등록해야 한다.
+   * 아래에 두면 /notes/tags 요청이 id="tags" 로 잡혀 404가 된다.
+   */
+  http.get(apiUrl('/notes/tags'), ({ request }) => {
+    const tokenUser = requireUser(request)
+    if (!tokenUser) return unauthorized()
+
+    const counts = new Map<string, number>()
+    for (const note of db.notes) {
+      if (note.user_id !== tokenUser.id) continue
+      for (const tag of note.tags) {
+        counts.set(tag, (counts.get(tag) ?? 0) + 1)
+      }
+    }
+
+    const tags = [...counts.entries()]
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name))
+
+    return HttpResponse.json({ tags })
   }),
 
   /**

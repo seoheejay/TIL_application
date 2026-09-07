@@ -50,6 +50,22 @@ export interface GetNotesParams {
   page: number
   /** 1~100. 범위를 벗어나면 400. */
   items_per_page: number
+  /**
+   * 제목·본문에서 찾는다. 64자 이하.
+   * 빈 문자열이나 공백만 보내면 백엔드가 검색하지 않은 것으로 본다.
+   */
+  search?: string
+}
+
+/** GET /notes/tags 의 한 항목. count는 이 태그가 붙은 "내" 노트 개수다. */
+export interface TagSummary {
+  name: string
+  count: number
+}
+
+/** GET /notes/tags 응답 */
+export interface GetTagsResponse {
+  tags: TagSummary[]
 }
 
 /** GET /notes/tags/{tag_name} 파라미터 */

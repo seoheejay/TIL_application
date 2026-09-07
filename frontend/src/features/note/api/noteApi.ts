@@ -4,15 +4,29 @@ import type {
   GetNotesByTagParams,
   GetNotesParams,
   GetNotesResponse,
+  GetTagsResponse,
   Note,
   UpdateNoteRequest,
 } from '../types'
 
-/** GET /notes?page=&items_per_page= — 인증 필요 */
-export async function getNotes({ page, items_per_page }: GetNotesParams): Promise<GetNotesResponse> {
+/**
+ * GET /notes?page=&items_per_page=&search= — 인증 필요.
+ * search를 주면 제목·본문에서 그 말이 든 노트만 걸러진다. total_count도 걸러진 개수다.
+ */
+export async function getNotes({ page, items_per_page, search }: GetNotesParams): Promise<GetNotesResponse> {
   const { data } = await api.get<GetNotesResponse>('/notes', {
-    params: { page, items_per_page },
+    // 빈 문자열을 보내도 백엔드가 무시하지만, 아예 빼서 쿼리스트링을 깔끔하게 둔다
+    params: { page, items_per_page, ...(search ? { search } : {}) },
   })
+  return data
+}
+
+/**
+ * GET /notes/tags — 내가 쓴 태그와 각 태그의 내 노트 개수.
+ * 많이 쓴 태그가 먼저 온다. 남만 쓴 태그는 오지 않는다.
+ */
+export async function getTags(): Promise<GetTagsResponse> {
+  const { data } = await api.get<GetTagsResponse>('/notes/tags')
   return data
 }
 

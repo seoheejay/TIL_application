@@ -45,7 +45,8 @@ CORS 는 `localhost` / `127.0.0.1` 이면 **포트를 가리지 않고 허용**�
 | DELETE | `/users` | 로그인 | 회원 탈퇴 |
 | GET | `/users` | **ADMIN** | 전체 유저 목록 |
 | POST | `/notes` | 로그인 | 노트 작성 |
-| GET | `/notes` | 로그인 | 내 노트 목록 |
+| GET | `/notes` | 로그인 | 내 노트 목록 (`search=` 로 제목·본문 검색) |
+| GET | `/notes/tags` | 로그인 | 내 태그와 개수 |
 | GET | `/notes/tags/{tag_name}` | 로그인 | 태그로 검색 |
 | GET | `/notes/{id}` | 로그인 | 노트 단건 |
 | PUT | `/notes/{id}` | 로그인 | 노트 수정 |
@@ -78,6 +79,31 @@ await fetch("/notes", {
 ```
 
 응답의 `tags` 는 **문자열 배열**입니다 (서버 내부에서는 객체지만 API 경계에서 이름만 내보냅니다).
+
+### 검색
+
+`GET /notes?search=` 로 제목과 본문을 함께 찾습니다. 대소문자를 가리지 않고, `total_count` 도 걸러진 개수입니다.
+
+```
+GET /notes?search=fastapi&page=1&items_per_page=10
+```
+
+- 64자까지. 넘으면 400
+- 공백만 보내면 검색하지 않은 것으로 봅니다
+- `%` 와 `_` 는 글자 그대로 찾습니다 (LIKE 와일드카드로 새지 않게 이스케이프)
+- **태그는 검색 대상이 아닙니다.** 태그로 찾으려면 `/notes/tags/{tag_name}` 을 씁니다
+
+### 태그 목록
+
+`GET /notes/tags` 는 내가 쓴 태그와 각 태그가 붙은 **내** 노트 개수를 많이 쓴 순으로 돌려줍니다.
+
+```json
+{ "tags": [ { "name": "TIL", "count": 12 }, { "name": "FastAPI", "count": 3 } ] }
+```
+
+태그 행은 유저끼리 공유되지만 개수는 내 노트만 셉니다. 남만 쓴 태그는 아예 나오지 않습니다.
+
+> 라우터 선언 순서 주의: `/notes/tags` 는 `/notes/{id}` 와 세그먼트 수가 같아서 **반드시 그보다 위에** 있어야 합니다. 아래에 두면 `id="tags"` 로 잡혀 404가 됩니다. (`/notes/tags/{tag_name}` 은 세그먼트 수가 달라 충돌하지 않습니다.)
 
 ### 목록 응답 형태
 

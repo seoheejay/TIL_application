@@ -3,7 +3,7 @@ from note.domain.note import Note
 from note.domain.repository.note_repo import INoteRepository # 인터페이스만 참조
 
 from datetime import datetime
-from note.domain.note import Tag
+from note.domain.note import Tag, TagSummary
 
 class NoteService:
     # __init__ : 객체가 만들어질 때 한 번 실행되는 생성자
@@ -31,12 +31,17 @@ class NoteService:
             user_id: str,
             page:int,
             items_per_page: int,
+            search: str|None = None,
     ) -> tuple[int, list[Note]]: # -> 뒤는 반환 타입. (전체개수, 노트목록)
         return self.note_repo.get_notes( # 조회는 판단할 게 없어서 그대로 넘긴다
             user_id= user_id,
             page=page,
             items_per_page=items_per_page,
+            search=search,
         )
+
+    def get_tags(self, user_id: str) -> list[TagSummary]:
+        return self.note_repo.get_tags(user_id)
 
     def get_note(self, user_id:str, id:str) -> Note:
         return self.note_repo.find_by_id(user_id, id) # 순서대로 넘기면 위치 인자

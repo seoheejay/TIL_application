@@ -18,3 +18,13 @@ class Note:
     tags: list[Tag]
     created_at: datetime
     updated_at: datetime
+
+
+@dataclass
+class TagSummary:
+    """
+    "내 태그 목록" 화면용 읽기 모델.
+    Tag 엔티티와 달리 id나 시각이 없다. 화면이 필요한 건 이름과 개수뿐이다
+    """
+    name: str
+    count: int

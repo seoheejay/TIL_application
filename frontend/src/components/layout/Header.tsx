@@ -1,4 +1,4 @@
-import { NavLink, useNavigate } from 'react-router-dom'
+import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/features/auth/hooks/AuthContext'
 import { Button } from '@/components/common/Button'
 
@@ -15,6 +15,12 @@ export function Header() {
 
   const linkClass = ({ isActive }: { isActive: boolean }) => (isActive ? 'is-active' : '')
 
+  // NavLink는 to="/notes"를 접두사로 매칭해서 /notes/tags 에서도 "노트"가 활성화된다.
+  // 두 메뉴가 동시에 켜지지 않게 여기서 직접 가른다.
+  const { pathname } = useLocation()
+  const inTagSection = pathname.startsWith('/notes/tags')
+  const inNoteSection = pathname.startsWith('/notes') && !inTagSection
+
   return (
     <header className="app-header">
       <div className="app-header__inner">
@@ -22,8 +28,11 @@ export function Header() {
         <nav className="app-header__nav">
           {isAuthenticated && (
             <>
-              <NavLink to="/notes" className={linkClass}>
+              <NavLink to="/notes" className={inNoteSection ? 'is-active' : ''}>
                 노트
+              </NavLink>
+              <NavLink to="/notes/tags" className={inTagSection ? 'is-active' : ''}>
+                태그
               </NavLink>
               {isAdmin && (
                 <NavLink to="/users" className={linkClass}>

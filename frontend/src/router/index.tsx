@@ -11,6 +11,7 @@ import { NoteCreatePage } from '@/pages/note/NoteCreatePage'
 import { NoteDetailPage } from '@/pages/note/NoteDetailPage'
 import { NoteEditPage } from '@/pages/note/NoteEditPage'
 import { NoteTagPage } from '@/pages/note/NoteTagPage'
+import { TagIndexPage } from '@/pages/note/TagIndexPage'
 import { NotFoundPage } from '@/pages/NotFoundPage'
 
 export const router = createBrowserRouter(
@@ -31,8 +32,10 @@ export const router = createBrowserRouter(
           children: [
             { path: 'notes', element: <NoteListPage /> },
             { path: 'notes/new', element: <NoteCreatePage /> },
-            // 'notes/tags/:tagName' 은 'notes/:id' 보다 먼저 둔다.
-            // 세그먼트 수가 달라 실제로 충돌하지는 않지만, 읽는 순서가 곧 우선순위라 명확하게 둔다.
+            // 'notes/tags' 는 'notes/:id' 와 세그먼트 수가 같다.
+            // React Router는 정적 세그먼트를 동적보다 우선하므로 순서와 무관하게 동작하지만,
+            // 백엔드(FastAPI)는 선언 순서대로 매칭하므로 양쪽 규칙을 같은 순서로 맞춰 둔다.
+            { path: 'notes/tags', element: <TagIndexPage /> },
             { path: 'notes/tags/:tagName', element: <NoteTagPage /> },
             { path: 'notes/:id', element: <NoteDetailPage /> },
             { path: 'notes/:id/edit', element: <NoteEditPage /> },
