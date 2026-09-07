@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, EmailStr, Field
 
 from user.application.user_service import UserService
@@ -74,8 +74,8 @@ def login(
 @router.get("", response_model=GetUsersResponse)
 @inject
 def get_users(
-    page: int = 1,
-    items_per_page: int = 10,
+    page: Annotated[int, Query(ge=1)] = 1,
+    items_per_page: Annotated[int, Query(ge=1, le=100)] = 10,
     #get_current_user가 아니라 get_admin_user다.
     #TIL 서비스에서 전체 유저 목록은 어드민만 볼 수 있다. 토큰의 role이 ADMIN이 아니면 403
     current_user: CurrentUser = Depends(get_admin_user),

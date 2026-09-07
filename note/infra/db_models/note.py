@@ -1,6 +1,7 @@
 from datetime import datetime
 
-from sqlalchemy import Column, DateTime, ForeignKey, String, Table, Text
+from sqlalchemy import Column, DateTime, ForeignKey, String, Table
+from sqlalchemy.dialects.mysql import MEDIUMTEXT
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from database import Base
@@ -26,7 +27,9 @@ class Note(Base):
         String(36), ForeignKey("User.id", ondelete="CASCADE"), nullable=False, index=True
     )
     title: Mapped[str] = mapped_column(String(64), nullable=False)
-    content: Mapped[str] = mapped_column(Text, nullable=False)
+    #TEXT는 65,535바이트뿐이라 긴 노트에서 넘친다(한글은 글자당 3~4바이트).
+    #MEDIUMTEXT는 약 16MB
+    content: Mapped[str] = mapped_column(MEDIUMTEXT, nullable=False)
     memo_date: Mapped[str] = mapped_column(String(8), nullable=False, index=True)  # "20260907"
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)

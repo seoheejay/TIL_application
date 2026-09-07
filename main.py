@@ -5,6 +5,7 @@ from note.interface.controllers.note_controller import router as note_routers
 from fastapi.exceptions import RequestValidationError
 from fastapi.requests import Request
 from fastapi.responses import JSONResponse
+from fastapi.encoders import jsonable_encoder
 from fastapi.middleware.cors import CORSMiddleware
 
 from config import CORS_ORIGINS
@@ -30,9 +31,11 @@ async def validation_exception_handler(
     request: Request,
     exc: RequestValidationError
 ):
+    #exc.errors()의 ctx에는 원본 예외 객체(ValueError 등)가 들어있어 그대로는 JSON이 되지 않는다.
+    #커스텀 field_validator를 쓰면 여기서 500이 난다. jsonable_encoder로 직렬화 가능한 형태로 바꾼다
     return JSONResponse(
         status_code=400,
-        content=exc.errors()
+        content=jsonable_encoder(exc.errors())
     )
 
 @app.get("/")

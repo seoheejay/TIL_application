@@ -2,8 +2,8 @@ from datetime import datetime
 from dataclasses import asdict
 from typing import Annotated
 from dependency_injector.wiring import Provide, inject
-from fastapi import APIRouter, Depends
-from pydantic import BaseModel, Field
+from fastapi import APIRouter, Depends, Query
+from pydantic import BaseModel, Field, field_validator
 
 from common.auth import CurrentUser, get_current_user
 from containers import Container
@@ -14,6 +14,14 @@ router = APIRouter(prefix="/notes")
 
 #태그 한 개에 적용할 제약. 여러 모델에서 재사용한다
 TagName = Annotated[str, Field(min_length=1, max_length=32)]
+
+#page가 0이나 음수면 offset이 음수가 되어 DB가 에러를 낸다(500).
+#items_per_page에 상한이 없으면 한 번에 전체를 긁어갈 수 있다
+#MEDIUMTEXT는 약 16MB. 한글은 utf8mb4에서 글자당 3~4바이트라 넉넉하게 잡아도 안전하다
+MAX_CONTENT_LENGTH = 100_000
+
+Page = Annotated[int, Query(ge=1)]
+ItemsPerPage = Annotated[int, Query(ge=1, le=100)]
 
 class NoteResponse(BaseModel):
     id: str
@@ -30,21 +38,40 @@ class GetNotesResponse(BaseModel):
     page: int
     notes: list[NoteResponse]
 
+def _validate_memo_date(v: str | None) -> str | None:
+    """
+    길이만 8자로 맞추면 "abcdefgh"나 "20260231"(2월 31일)도 통과한다.
+    실제로 존재하는 날짜인지 파싱해서 확인한다
+    """
+    if v is None:
+        return v
+    try:
+        datetime.strptime(v, "%Y%m%d")
+    except ValueError:
+        raise ValueError("memo_date는 YYYYMMDD 형식의 실제 날짜여야 합니다 (예: 20260907)")
+    return v
+
+
 class CreateNoteBody(BaseModel):
     #str만 붙이면 "문자열이면 통과" -> 따라서 Field 붙여 길이 조건 추가시킴
     title: str = Field(min_length=1, max_length=64)
-    content: str= Field(min_length=1)
+    #상한이 없으면 DB의 MEDIUMTEXT 한계를 넘겨 500이 난다
+    content: str= Field(min_length=1, max_length=MAX_CONTENT_LENGTH)
     memo_date: str = Field(min_length=8, max_length=8)
     #list 자체에 min/max_length를 걸면 "원소 개수" 제한이 된다.
     #태그 한 개의 길이를 제한하려면 원소 타입쪽에 Annotated로 건다 (DB의 Tag.name도 32자)
     tags: list[TagName] | None = Field(default=None)
 
+    _check_memo_date = field_validator("memo_date")(_validate_memo_date)
+
 class UpdateNoteBody(BaseModel):
     title: str | None = Field(default=None, min_length=1, max_length=64)
-    content: str | None = Field(default=None, min_length=1)
+    content: str | None = Field(default=None, min_length=1, max_length=MAX_CONTENT_LENGTH)
     memo_date: str | None = Field(default=None, min_length=8, max_length=8)
     #None이면 태그를 건드리지 않고, []를 보내면 전부 지운다
     tags: list[TagName] | None = Field(default=None)
+
+    _check_memo_date = field_validator("memo_date")(_validate_memo_date)
 
 
 def _to_response(note: Note) -> dict:
@@ -81,8 +108,8 @@ def create_note(
 @router.get("", response_model=GetNotesResponse)
 @inject
 def get_notes(
-    page: int = 1,
-    items_per_page: int  = 10,
+    page: Page = 1,
+    items_per_page: ItemsPerPage = 10,
     current_user: CurrentUser = Depends(get_current_user),
     note_service: NoteService = Depends(Provide[Container.note_service]),
 ): 
@@ -103,8 +130,8 @@ def get_notes(
 @inject
 def get_notes_by_tag(
     tag_name: str,
-    page: int = 1,
-    items_per_page: int = 10,
+    page: Page = 1,
+    items_per_page: ItemsPerPage = 10,
     current_user: CurrentUser = Depends(get_current_user),
     note_service: NoteService = Depends(Provide[Container.note_service]),
 ):
