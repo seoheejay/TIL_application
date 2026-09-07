@@ -6,11 +6,17 @@ from sqlalchemy import pool
 from alembic import context
 import database
 from user.infra.db_models.user import User
+from note.infra.db_models.note import Note, Tag
 #import database_models
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
+
+# alembic.ini 에 접속 문자열을 적어두면 git 에 올라간다.
+# .env 에서 읽은 값을 여기서 주입한다
+from config import DATABASE_URL
+config.set_main_option("sqlalchemy.url", DATABASE_URL)
 
 
 # Interpret the config file for Python logging.
@@ -23,7 +29,7 @@ if config.config_file_name is not None:
 # from myapp import mymodel
 # target_metadata = mymodel.Base.metadata
 #target_metadata = None
-target_metadata = database.Base.metadata,
+target_metadata = database.Base.metadata
 # other values from the config, defined by the needs of env.py,
 # can be acquired:
 # my_important_option = config.get_main_option("my_important_option")
