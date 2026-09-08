@@ -329,15 +329,41 @@ h1, h2, h3 {
   display: flex;
   flex-wrap: wrap;
   gap: 0.35rem;
-  margin-top: 0.6rem;
+  /* ul 기본값을 지운다. 안 지우면 li 불릿이 flex 아이템 바깥에 그려져
+     옆 태그와 겹치고, 왼쪽에 40px 들여쓰기가 남는다 */
+  list-style: none;
+  padding: 0;
+  margin: 0.6rem 0 0;
 }
 
 .tag {
+  display: inline-block;
   font-size: 0.78rem;
-  padding: 0.1rem 0.5rem;
+  /* 위아래 여백이 0.1rem이면 알약 모양이 눌려 보인다 */
+  padding: 0.15rem 0.55rem;
+  line-height: 1.5;
   border-radius: 999px;
   background: var(--accent-soft);
   color: var(--accent);
+  white-space: nowrap;
+}
+
+/* 태그가 링크일 때 — 알약 전체가 눌리는 영역이 되도록 a를 채운다 */
+.tag a {
+  display: block;
+  margin: -0.15rem -0.55rem;
+  padding: 0.15rem 0.55rem;
+  border-radius: inherit;
+  color: inherit;
+}
+
+.tag a:hover,
+a.tag:hover {
+  text-decoration: none;
+  background: var(--accent);
+  /* 흰색을 박으면 다크 모드에서 밝은 accent 위에 흰 글자가 되어 안 읽힌다.
+     surface는 라이트에서 흰색, 다크에서 어두운 색이라 양쪽 다 성립한다 */
+  color: var(--surface);
 }
 
 /* ---------- table ---------- */
